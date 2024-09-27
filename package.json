@@ -1,0 +1,40 @@
+{
+  "name": "bilibili-blacklist",
+  "description": "bilibili视频过滤",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "vue-tsc --noEmit",
+    "postinstall": "wxt prepare",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@types/lodash": "^4.17.7",
+    "@types/webextension-polyfill": "^0.10.7",
+    "@webext-core/messaging": "^1.4.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "monaco-editor": "^0.52.0",
+    "monaco-editor-vue3": "^0.1.10",
+    "uuid": "^10.0.0",
+    "vue": "^3.4.31",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "@vicons/ionicons5": "^0.12.0",
+    "@wxt-dev/module-vue": "^1.0.0",
+    "naive-ui": "^2.39.0",
+    "typescript": "^5.5.2",
+    "vitest": "^2.1.1",
+    "vue-tsc": "^2.0.22",
+    "wxt": "^0.18.10"
+  }
+}

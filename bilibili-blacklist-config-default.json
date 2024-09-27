@@ -1,0 +1,201 @@
+{
+  "appSettings": {
+    "debug": false,
+    "report": true,
+    "reportLimit": 1000,
+    "start": false
+  },
+  "generalFilterSettings": {
+    "showBlockMask": true,
+    "showFollowed": true
+  },
+  "blacklist": {
+    "titleRegexList": [
+      "/.*大型纪录片.*/",
+      "/.*拒绝废话.*/"
+    ],
+    "uidList": [
+      "589708238"
+    ],
+    "unameList": [],
+    "unameRegexList": []
+  },
+  "filterList": [
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport, ext } = filterCtx;\n        console.log(filterCtx)\n        const data = JSON.parse(responseText);\n        const items = data.data.item;\n        const filteredItems = [];\n        const adBlockMask = function(item) {\n            if (ext.showAdBlockMask) {\n                if(item.bussiness_info){\n                    item.bussiness_info.title = '广告';\n                    item.bussiness_info.pic = '';\n                    item.bussiness_info.name = '***';\n                }\n                filteredItems.push(item);\n            }\n        }\n        const liveBlockMask = function(item) {\n            if (ext.showLiveBlockMask) {\n                item.room_info.title = '直播';\n                item.room_info.pic = '';\n                item.room_info.name = '***';\n                filteredItems.push(item);\n            }\n        }\n        const generalBlockMask = function(item) {\n            if (ext.showGeneralBlockMask) {\n                item.title = '***';\n                item.pic = '';\n                if (item.owner) {\n                    item.owner.name = '***';\n                }\n                filteredItems.push(item);\n            }\n        }\n        const itemFilter = function(item) {\n            if (generalFilterSettings.showFollowed && item.is_followed == 1) {\n                // 显示关注的人的视频\n                filteredItems.push(item);\n                return\n            }\n            if (ext.blockAd && item.goto == 'ad') {\n                // 屏蔽广告\n          \n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '广告',\n                    reasonType: 'ad',\n                    item: JSON.stringify(item)\n                });\n                adBlockMask(item);\n                return\n            }\n            if (ext.blockLive && item.goto == 'live') {\n                // 屏蔽直播\n                \n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '直播',\n                    reasonType: 'live',\n                    item: JSON.stringify(item)\n                });\n                liveBlockMask(item);\n                return\n            }\n            const uid = item.owner && item.owner.mid;\n            if (uid && blacklist.uidList && blacklist.uidList.includes(uid)) {\n                // 屏蔽黑名单用户\n                \n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '黑名单用户',\n                    reasonType: 'uid',\n                    value: uid,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            const uname = item.owner && item.owner.name;\n            if (uname && blacklist.unameList && blacklist.unameList.includes(uname)) {\n                // 屏蔽黑名单用户\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '黑名单用户',\n                    reasonType: 'uname',\n                    value: uname,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if (uname && blacklist.unameRegexList && blacklist.unameRegexList.some(function(regex) { return regex.test(uname); })) {\n                // 屏蔽黑名单用户\n                \n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '黑名单用户',\n                    reasonType: 'uname',\n                    value: uname,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if (blacklist.titleRegexList && blacklist.titleRegexList.some(function(regex) { return regex.test(item.title); })) {\n                // 屏蔽黑名单标题\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '黑名单标题',\n                    reasonType: 'title',\n                    value: item.title,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if(uid >= ext.uidGreaterThan){\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: 'uid大于屏蔽'+ext.uidGreaterThan,\n                    reasonType: 'uidGreaterThan',\n                    value: uid,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            console.log(item.duration, ext.durationLessThan)\n            if(item.duration <= ext.durationLessThan){\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '视频时长小于'+ext.durationLessThan,\n                    reasonType: 'durationLessThan',\n                    value: item.duration,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if(item.stat && item.stat.view <= ext.viewLessThan){\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '播放量小于'+ext.viewLessThan,\n                    reasonType: 'viewLessThan',\n                    value: item.stat.view,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if(item.stat && item.stat.like <= ext.likeLessThan){\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '点赞数小于'+ext.likeLessThan,\n                    reasonType: 'likeLessThan',\n                    value: item.stat.like,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if(item.stat && item.stat.danmaku <= ext.danmakuLessThan){\n                blockReport({\n                    filterName: '首页推荐过滤器',\n                    reason: '弹幕数小于屏蔽'+ext.danmakuLessThan,\n                    reasonType: 'danmakuLessThan',\n                    value: item.stat.danmaku,\n                    item: JSON.stringify(item)\n                });\n                generalBlockMask(item);\n                return\n            }\n            if(item.stat){\n                const viewLikeRatio = item.stat.view / item.stat.like;\n                if(viewLikeRatio <= ext.viewLikeRatioLessThan){\n                    blockReport({\n                        filterName: '首页推荐过滤器',\n                        reason: '播放量与点赞数的比率小于'+ext.viewLikeRatioLessThan,\n                        reasonType: 'viewLikeRatioLessThan',\n                        value: viewLikeRatio,\n                        item: JSON.stringify(item)\n                    });\n                    generalBlockMask(item);\n                    return\n                }\n            }\n            if(item.stat){\n                const viewDanmakuRatio = item.stat.view / item.stat.danmaku;\n                if(viewDanmakuRatio <= ext.viewDanmakuRatioLessThan){\n                    blockReport({\n                        filterName: '首页推荐过滤器',\n                        reason: '播放量与弹幕数的比率小于'+ext.viewDanmakuRatioLessThan,\n                        reasonType: 'viewDanmakuRatioLessThan',\n                        value: viewDanmakuRatio,\n                        item: JSON.stringify(item)\n                    });\n                    generalBlockMask(item);\n                    return\n                }\n            }\n            if(item.stat){\n                const likeDanmakuRatio = item.stat.like / item.stat.danmaku;\n                if(likeDanmakuRatio <= ext.likeDanmakuRatioLessThan){\n                    blockReport({\n                        filterName: '首页推荐过滤器',\n                        reason: '点赞数与弹幕数的比率小于'+ext.likeDanmakuRatioLessThan,\n                        reasonType: 'likeDanmakuRatioLessThan',\n                        value: likeDanmakuRatio,\n                        item: JSON.stringify(item)\n                    }); \n                    generalBlockMask(item);\n                    return\n                }\n            }\n            // 添加到结果列表\n            filteredItems.push(item);\n        }\n        for (const item of items) {\n            try {\n                itemFilter(item);\n            } catch (e) {\n                errorReport(e);\n            }\n        }\n        data.data.item = filteredItems;\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [
+        {
+          "defaultValue": true,
+          "description": "屏蔽广告",
+          "id": "blockAd",
+          "name": "blockAd",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": true,
+          "description": "屏蔽直播",
+          "id": "blockLive",
+          "name": "blockLive",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": true,
+          "description": "显示关注的人的视频",
+          "id": "showFollowed",
+          "name": "showFollowed",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": true,
+          "description": "显示广告遮罩",
+          "id": "showAdBlockMask",
+          "name": "showAdBlockMask",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": true,
+          "description": "显示直播遮罩",
+          "id": "showLiveBlockMask",
+          "name": "showLiveBlockMask",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": true,
+          "description": "显示黑名单遮罩",
+          "id": "showGeneralBlockMask",
+          "name": "showGeneralBlockMask",
+          "type": "boolean",
+          "value": true
+        },
+        {
+          "defaultValue": 3000000000000000,
+          "description": "uid大于屏蔽",
+          "id": "uidGreaterThan",
+          "name": "uidGreaterThan",
+          "type": "number",
+          "value": 3000000000000000
+        },
+        {
+          "defaultValue": 100,
+          "description": "时长小于屏蔽",
+          "id": "durationLessThan",
+          "name": "durationLessThan",
+          "type": "number",
+          "value": 100
+        },
+        {
+          "defaultValue": 1000,
+          "description": "播放量小于屏蔽",
+          "id": "viewLessThan",
+          "name": "viewLessThan",
+          "type": "number",
+          "value": 1000
+        },
+        {
+          "defaultValue": 100,
+          "description": "点赞数小于屏蔽",
+          "id": "likeLessThan",
+          "name": "likeLessThan",
+          "type": "number",
+          "value": 100
+        },
+        {
+          "defaultValue": 5,
+          "description": "弹幕数小于屏蔽",
+          "id": "danmakuLessThan",
+          "name": "danmakuLessThan",
+          "type": "number",
+          "value": 5
+        },
+        {
+          "defaultValue": 0.05,
+          "description": "播放量与点赞数的比率小于屏蔽",
+          "id": "viewLikeRatioLessThan",
+          "name": "viewLikeRatioLessThan",
+          "type": "number",
+          "value": 0.05
+        },
+        {
+          "defaultValue": 0,
+          "description": "播放量与弹幕数的比率小于屏蔽",
+          "id": "viewDanmakuRatioLessThan",
+          "name": "viewDanmakuRatioLessThan",
+          "type": "number",
+          "value": 0
+        },
+        {
+          "defaultValue": 0.05,
+          "description": "点赞数与弹幕数的比率小于屏蔽",
+          "id": "likeDanmakuRatioLessThan",
+          "name": "likeDanmakuRatioLessThan",
+          "type": "number",
+          "value": 0.05
+        }
+      ],
+      "id": "homeFeedFilter",
+      "name": "首页推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.bilibili.com/x/web-interface/wbi/index/top/feed/rcmd?');",
+      "sort": 1,
+      "start": true
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        data.data.list = data.data.list.filter(item => {\n            blockReport({\n                filterName: '首页右侧栏漫画推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.horizontal_cover = '';\n                item.recommendation = '';\n                return true;\n            }\n            return false;\n        });\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeComicsFilter",
+      "name": "首页右侧栏漫画推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://manga.bilibili.com/twirp/comic.v1.MainStation/Feed');",
+      "sort": 1,
+      "start": false
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        data.data.season = data.data.season.filter(item => {\n            blockReport({\n                filterName: '首页右侧栏课程推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.cover = '';\n                item.up_name = '***';\n                return true;\n            }\n            return false;\n        });\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeCourseFilter",
+      "name": "首页右侧栏课程推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.bilibili.com/pugv/app/web/floor/switch?');",
+      "sort": 1,
+      "start": false
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        const recommend_room_list = [];\n        for(const item of data.data.recommend_room_list){\n            blockReport({\n                filterName: '首页右侧栏直播推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.uname = '***';\n                item.cover = '';\n                // recommend_room_list.push(item);\n            }\n        }\n        data.data.recommend_room_list = recommend_room_list;\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeMoreRecFilter",
+      "name": "首页右侧栏直播推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.live.bilibili.com/xlive/web-interface/v1/webMain/getMoreRecList?');",
+      "sort": 1,
+      "start": false
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        data.data.archives = data.data.archives.filter(item => {\n            blockReport({\n                filterName: '首页右侧栏电影、电视剧推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.pic = '';\n                item.owner.name = '***';\n                return true;\n            }\n            return false;\n        });\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeMovieFilter",
+      "name": "首页右侧栏电影、电视剧推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.bilibili.com/x/web-interface/dynamic/region?');",
+      "sort": 1,
+      "start": false
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        const result = [];\n        for(const item of data.result.latest){\n            blockReport({\n                filterName: '首页右侧栏(番剧、国创)推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.ep_cover = '';\n                result.push(item);\n            }\n        }\n        data.result.latest = result;\n        data.result.timeline = data.result.timeline.filter(item => {\n            item.episodes = item.episodes.filter(episode => {\n                blockReport({\n                    filterName: '首页右侧栏(番剧、国创)推荐过滤器',\n                    reason: '广告',\n                    reasonType: 'ad',\n                    item: JSON.stringify(episode)\n                });\n                if(generalFilterSettings.showBlockMask){\n                    episode.title = '***';\n                    episode.ep_cover = '';\n                    return true;\n                }\n                return false;\n            });\n            if(item.episodes.length === 0){\n                return false;\n            }\n            return true;\n        });\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeTimelineFilter",
+      "name": "首页右侧栏(番剧、国创)推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.bilibili.com/pgc/web/timeline/v2?');",
+      "sort": 1,
+      "start": false
+    },
+    {
+      "filter": "\n        const { generalFilterSettings, blacklist, blockReport, errorReport } = filterCtx;\n        const data = JSON.parse(responseText);\n        data.data.list = data.data.list.filter(item => {\n            blockReport({\n                filterName: '首页右侧栏综艺推荐过滤器',\n                reason: '广告',\n                reasonType: 'ad',\n                item: JSON.stringify(item)\n            });\n            if(generalFilterSettings.showBlockMask){\n                item.title = '***';\n                item.cover = '';\n                item.sub_title = '***';\n                return true;\n            }\n            return false;\n        });\n        return JSON.stringify(data);\n    ",
+      "filterConfList": [],
+      "id": "homeVarietyFilter",
+      "name": "首页右侧栏综艺推荐过滤器",
+      "predicate": "return requestUrl.startsWith('https://api.bilibili.com/pgc/web/variety/feed?');",
+      "sort": 1,
+      "start": false
+    }
+  ]
+}
